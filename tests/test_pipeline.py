@@ -6,6 +6,7 @@ sizinti korumasi, zaman sirasi, ekstrapolasyon kilidi, birim donusumu.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -520,3 +521,63 @@ def test_predictions_are_deduplicated_on_read():
     # En YENI model surumu kazanmali
     assert unique["model_version"].unique().tolist() == ["20260202T000000"]
     assert unique["y_pred"].tolist() == [1.5, 2.5, 3.5]
+
+
+# --------------------------------------------------------------------------- #
+# Model paketi <-> ortam baglantisi
+# --------------------------------------------------------------------------- #
+def test_bundle_records_its_training_environment(tmp_path, profile, monkeypatch):
+    """Model bir kod artifaktidir; hangi ortamda dogdugunu bilmek zorundadir."""
+    from twin.models import registry
+
+    monkeypatch.setattr(registry, "model_root", lambda: tmp_path)
+    bundle = registry.ModelBundle(
+        target="sec_total_kwh_t", kind="regression", model=None, features=["a"],
+        version="v1", profile="paper", line_id="PM2",
+        environment=registry.current_environment(),
+    )
+    path = registry.save_bundle(bundle)
+    meta = json.loads((path / "meta.json").read_text(encoding="utf-8"))
+
+    assert meta["environment"]["scikit_learn"]
+    assert meta["environment"]["python"]
+
+
+def test_incompatible_environment_is_refused_not_silently_loaded(tmp_path, profile, monkeypatch):
+    """Farkli bir sklearn MINOR surumunde pickle SESSIZCE yanlis sonuc uretebilir.
+
+    sklearn'in kendi uyarisi: "may lead to breaking code or invalid results".
+    Sessizce yuklemektense reddetmek dogru davranistir -- yanlis sayi, hic sayi
+    olmamasindan kotudur.
+    """
+    from twin.models import registry
+
+    monkeypatch.setattr(registry, "model_root", lambda: tmp_path)
+    stale = dict(registry.current_environment())
+    stale["scikit_learn"] = "0.1.0"
+    registry.save_bundle(registry.ModelBundle(
+        target="sec_total_kwh_t", kind="regression", model=None, features=["a"],
+        version="v1", profile="paper", line_id="PM2", environment=stale,
+    ))
+
+    with pytest.raises(EnvironmentError, match="scikit-learn"):
+        registry.load_bundle("sec_total_kwh_t", "paper")
+
+
+def test_load_all_reports_failures_instead_of_hiding_them(tmp_path, profile, monkeypatch):
+    """Yuklenemeyen modeli sessizce atlamak, dashboard'un 4 hedef yerine
+    1 tanesini gostermesi ve kimsenin fark etmemesi demektir."""
+    from twin.models import registry
+
+    monkeypatch.setattr(registry, "model_root", lambda: tmp_path)
+    stale = dict(registry.current_environment())
+    stale["scikit_learn"] = "0.1.0"
+    registry.save_bundle(registry.ModelBundle(
+        target="reel_moisture_pct", kind="regression", model=None, features=["a"],
+        version="v1", profile="paper", line_id="PM2", environment=stale,
+    ))
+
+    bundles, failures = registry.load_all_detailed("paper")
+    assert bundles == {}
+    assert "reel_moisture_pct" in failures
+    assert "scikit-learn" in failures["reel_moisture_pct"]

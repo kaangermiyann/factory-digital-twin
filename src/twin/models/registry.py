@@ -16,18 +16,49 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 
 from twin.config import get_settings, resolve_path
 
 log = logging.getLogger(__name__)
+
+
+def current_environment() -> Dict[str, str]:
+    """Modelin egitildigi ortam. Paketle birlikte saklanir.
+
+    Sebep: joblib/pickle ile serilestirilmis bir sklearn modeli, farkli bir
+    sklearn surumunde ya HIC acilmaz ya da -- daha kotusu -- acilir ve YANLIS
+    sonuc uretir (sklearn'in kendi uyarisi: "may lead to invalid results").
+    Model bir kod artifaktidir; hangi ortamda dogdugunu bilmek zorundayiz.
+    """
+    return {
+        "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+        "scikit_learn": sklearn.__version__,
+        "numpy": np.__version__,
+        "pandas": pd.__version__,
+    }
+
+
+def _incompatible(stored: Optional[Dict[str, str]]) -> Optional[str]:
+    """Saklanan ortamla bugunku ortam uyusuyor mu? Uyusmuyorsa sebebi doner."""
+    if not stored:
+        return None                      # eski paket -- bilgi yok, karar veremeyiz
+    now = current_environment()
+    stored_minor = ".".join(str(stored.get("scikit_learn", "")).split(".")[:2])
+    current_minor = ".".join(now["scikit_learn"].split(".")[:2])
+    if stored_minor and stored_minor != current_minor:
+        return (f"scikit-learn {stored.get('scikit_learn')} ile egitildi, "
+                f"su an {now['scikit_learn']} kurulu")
+    return None
 
 
 @dataclass
@@ -51,6 +82,7 @@ class ModelBundle:
     holdout_start: Optional[str] = None
     n_rows: int = 0
     algorithm: str = ""
+    environment: Dict[str, str] = field(default_factory=dict)
 
     # -- tahmin -------------------------------------------------------------- #
     def _median(self, feature: str) -> float:
@@ -237,6 +269,7 @@ def save_bundle(bundle: ModelBundle) -> Path:
         "train_end": bundle.train_end,
         "holdout_start": bundle.holdout_start,
         "n_rows": bundle.n_rows,
+        "environment": bundle.environment or current_environment(),
         "saved_at": datetime.now(timezone.utc).isoformat(),
     }
     (path / "meta.json").write_text(json.dumps(meta, indent=2, default=str), encoding="utf-8")
@@ -255,6 +288,15 @@ def load_bundle(target: str, profile: Optional[str] = None, version: Optional[st
         version = pointer.read_text(encoding="utf-8").strip()
     path = base / version
     meta = json.loads((path / "meta.json").read_text(encoding="utf-8"))
+
+    mismatch = _incompatible(meta.get("environment"))
+    if mismatch:
+        raise EnvironmentError(
+            f"'{target}' modeli bu ortamda guvenle yuklenemez: {mismatch}. "
+            "Pickle ile serilestirilmis model farkli bir sklearn surumunde "
+            "sessizce YANLIS sonuc uretebilir. Cozum: `make train` "
+            "(veya ./start.sh --fresh) ile yeniden egitin."
+        )
     payload = joblib.load(path / "model.joblib")
 
     bundle = ModelBundle(
@@ -272,6 +314,7 @@ def load_bundle(target: str, profile: Optional[str] = None, version: Optional[st
         holdout_start=meta.get("holdout_start"),
         n_rows=meta.get("n_rows", 0),
         algorithm=meta.get("algorithm", ""),
+        environment=meta.get("environment", {}),
     )
     if payload.get("support_sample") is not None:
         bundle.support_sample = payload["support_sample"]
@@ -280,21 +323,36 @@ def load_bundle(target: str, profile: Optional[str] = None, version: Optional[st
     return bundle
 
 
-def load_all(profile: Optional[str] = None) -> Dict[str, ModelBundle]:
-    """Egitilmis tum hedefleri yukler; eksik olanlari sessizce atlar."""
+def load_all_detailed(
+    profile: Optional[str] = None,
+) -> Tuple[Dict[str, ModelBundle], Dict[str, str]]:
+    """(yuklenenler, basarisizliklar) doner.
+
+    Basarisizliklari yutup sadece log'a yazmak TEHLIKELIDIR: dashboard 4 hedef
+    yerine 1 tanesini gosterir ve kullanici hicbir sey fark etmez. Cagiran taraf
+    neyin yuklenemedigini gorebilmeli ve kullaniciya soyleyebilmeli.
+    """
     profile = profile or get_settings().get_path("profile", "paper")
     root = model_root() / profile
     bundles: Dict[str, ModelBundle] = {}
+    failures: Dict[str, str] = {}
     if not root.exists():
-        return bundles
+        return bundles, failures
+
     for target_dir in sorted(root.iterdir()):
         if not (target_dir / "latest.txt").exists():
             continue
         try:
             bundles[target_dir.name] = load_bundle(target_dir.name, profile)
-        except Exception as exc:  # pragma: no cover
-            log.warning("Model yuklenemedi (%s): %s", target_dir.name, exc)
-    return bundles
+        except Exception as exc:
+            failures[target_dir.name] = str(exc)
+            log.error("Model yuklenemedi (%s): %s", target_dir.name, exc)
+    return bundles, failures
+
+
+def load_all(profile: Optional[str] = None) -> Dict[str, ModelBundle]:
+    """Yuklenebilen modeller. Basarisizliklari da gormek icin `load_all_detailed`."""
+    return load_all_detailed(profile)[0]
 
 
 def list_versions(target: str, profile: Optional[str] = None) -> List[str]:

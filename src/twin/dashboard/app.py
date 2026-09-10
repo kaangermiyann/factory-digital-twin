@@ -32,6 +32,7 @@ if __package__ in (None, ""):  # `streamlit run <dosya>` ile calistirildiginda
 from twin.dashboard import theme  # noqa: E402
 from twin.dashboard.data import (  # noqa: E402
     holdout_start,
+    load_failures,
     load_comparison,
     load_context,
     metrics_for,
@@ -47,6 +48,18 @@ st.set_page_config(page_title="Gerçek vs Tahmin", page_icon="📈", layout="wid
 theme.use_dark(str(st.get_option("theme.base") or "light").lower() == "dark")
 
 profile, repo, bundles, settings = resources()
+
+failures = load_failures()
+if failures:
+    st.error(
+        "**{} model yüklenemedi** — bu hedefler aşağıda görünmeyecek:\n\n{}\n\n"
+        "Model dosyaları eğitildikleri ortama bağlıdır (pickle). Çözüm: "
+        "`./start.sh --fresh` veya `make train`.".format(
+            len(failures),
+            "\n".join(f"- `{name}`: {reason}" for name, reason in failures.items()),
+        ),
+        icon="🚨",
+    )
 
 if not bundles:
     st.error("Eğitilmiş model yok.\n\n```\nmake sim\nmake train\nmake score\n```")

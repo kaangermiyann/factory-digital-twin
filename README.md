@@ -10,27 +10,41 @@ eklemek = yeni bir `config/profile.<ad>.yaml` yazmak.
 
 ---
 
-## 60 saniyede çalıştır
+## Çalıştır
 
 ```bash
-make setup      # bağımlılıklar
-make demo       # 90 günlük veri üret + 4 model eğit + son 48 saati skorla
-make dash       # http://localhost:8501
+git clone https://github.com/kaangermiyann/factory-digital-twin.git
+cd factory-digital-twin
+./start.sh
 ```
 
-Süreler (8 çekirdekli bir dizüstünde ölçüldü): veri üretimi **~15 sn**,
-feature tablosu **~4 sn**, eğitim **~20 dk** (4 hedef × 4 model × 4 katlı CV).
-Sadece ekranı görmek için `make train-fast` (~4 dk) yeter — ama o modun
-metrikleri rapora konmaz, eğitim çıktısı bunu ayrıca uyarır.
+Hepsi bu. Script şunları **kendisi** halleder:
 
-Docker/Elasticsearch gerekmez — varsayılan depo lokal Parquet.
-Elasticsearch ile çalıştırmak için:
+1. Uygun Python'u bulur (3.9+; `python3` birden fazla sürüme işaret edebiliyor)
+2. `.venv` kurar, bağımlılıkları yükler — `requirements.txt` değişmedikçe tekrar etmez
+3. 90 günlük sentetik fabrika verisi üretir (~15 sn)
+4. 4 modeli eğitir (~4 dk)
+5. Geçmişi skorlar ve dashboard'u açar → **http://localhost:8501**
+
+Her adım zaten yapılmışsa atlanır; ikinci çalıştırmada doğrudan dashboard açılır.
 
 ```bash
-make elastic-up
-export TWIN_STORAGE__BACKEND=elastic
-make demo && make dash
+./start.sh --fast      # hızlı eğitim (~1 dk) — metrikler rapora konmaz
+./start.sh --fresh     # her şeyi sıfırdan üret
+./start.sh --no-dash   # sadece hazırla, ekranı açma
+./start.sh --days 30   # daha kısa geçmiş
+./start.sh --port 8600
+./start.sh --help
 ```
+
+> **Modeller eğitildikleri ortama bağlıdır.** `joblib`/pickle ile saklanan bir
+> sklearn modeli farklı bir sürümde ya hiç açılmaz ya da — daha kötüsü — açılır
+> ve sessizce yanlış sonuç üretir. Model paketi eğitildiği ortamı kaydeder,
+> uyumsuzlukta yüklemeyi **reddeder**; `start.sh` bunu fark edip otomatik
+> yeniden eğitir. Dashboard yüklenemeyen model varsa 🚨 ile ekranda söyler —
+> sessizce eksik hedefle devam etmez.
+
+Docker tercih edersen: `docker compose --profile app up -d`
 
 ---
 
@@ -67,22 +81,26 @@ Tek başına birincisi gösterilirse "buharı kapat, enerji sıfır" saçmalığ
 ```
 sec_total_kwh_t  (özgül enerji, kWh/t)          reel_moisture_pct  (sarıcı nemi, %)
         model     mae    rmse  mape     r2              model    mae   rmse   mape     r2
- persistence*   15.11   33.49  1.12  0.905   gradient_boosting  0.413  0.598   8.15  0.875  ←
-      ▸ GBM     19.11   24.58  1.40  0.949 ←             ridge  0.486  0.910   9.64  0.709
-        ridge   19.24   24.75  1.41  0.948       random_forest  0.578  0.794  11.57  0.779
-random_forest   19.50   25.67  1.42  0.944               naive  0.953  1.688  18.82  0.000
+ persistence*   15.11   33.49  1.12  0.905   gradient_boosting  0.412  0.592   8.16  0.877  ←
+        ridge   19.24   24.75  1.41  0.948               ridge  0.486  0.910   9.64  0.709
+      ▸ RF      19.50   25.67  1.42  0.944 ←     random_forest  0.578  0.793  11.57  0.779
+gradient_boosting 19.84  25.86  1.45  0.943               naive  0.953  1.688  18.82  0.000
         naive   85.70  108.55  6.13 -0.001        persistence*  1.279  2.080  24.64 -0.519
-  naive'e göre %78 iyileşme                        naive'e göre %57 iyileşme
+  naive'e göre %77 iyileşme                        naive'e göre %57 iyileşme
 
 break_next_30m  (30 dk içinde duruş)             production_rate_tph  (t/h)
             model  pr_auc  roc_auc  recall@p50            model     mae     r2
      persistence*   0.776    0.924       0.871            ridge  0.0410  0.9998  ←
-         logistic   0.515    0.849       0.328    random_forest  0.0464  0.9993
-▸ gradient_boosting 0.509    0.845       0.437  ←  gradient_b..  0.0510  0.9994
-    random_forest   0.428    0.791       0.215            naive  3.2725 -0.0067
+▸ gradient_boosting 0.518    0.841       0.406  ←  random_forest  0.0464  0.9993
+         logistic   0.514    0.849       0.339    gradient_b..  0.0510  0.9994
+    random_forest   0.452    0.802       0.249            naive  3.2725 -0.0067
             naive   0.147    0.500       0.000     (fiziksel olarak deterministik:
-  naive'e göre %246 iyileşme                        üretim = hız × en × gramaj)
+  naive'e göre %252 iyileşme                        üretim = hız × en × gramaj)
 ```
+
+<sub>Python 3.14 / scikit-learn 1.9 ile üretildi. Farklı bir sürümde ağaç
+modellerinin skorları birkaç binde oynar; hangi modelin seçildiği bile
+değişebilir (bkz. optimizasyon-güvenli seçim).</sub>
 
 **Nasıl okunmalı — üç nokta:**
 
@@ -95,7 +113,7 @@ sorusuna cevabı yoktur, optimize edilemez. Sınıflandırmada etiket
 otokorelasyonunu ölçer: devam eden alarmı sürdürür, **ilk alarmı asla veremez**.
 Bu yüzden raporlanır ama seçilemez.
 
-**3. Kopuş modelinin PR-AUC'si 0.73 değil 0.51 — ve bu düzeltilmiş sayı.**
+**3. Kopuş modelinin PR-AUC'si 0.73 değil 0.52 — ve bu düzeltilmiş sayı.**
 İlk eğitimde 0.727 çıkmıştı; en önemli özelliği `batch_scrap_ratio` idi
 (önem 0.52, sonrakinin 20 katı). Ama ıskarta parti kapanınca kesinleşir ve
 **kopuş, ıskartayı üreten şeydir** — model olacak duruşun izini görüyordu.
@@ -123,7 +141,7 @@ Güven rozeti 🔴 yandı, yani koruma çalıştı — fakat tavsiyenin kendisi 
 > Ağaç modeli en iyi skora **%3** kadar yakınsa, doğrusal model yerine **o** seçilir.
 > Fark eşiği aşıyorsa doğruluk feda edilmez.
 
-Enerjide fark %0.5 → GBM seçildi. Üretim hızında fark %4.4 → ridge korundu.
+Enerjide fark %1.4 → RandomForest seçildi. Üretim hızında fark %13 → ridge korundu.
 Karar, model künyesine not olarak yazılır ve dashboard'da görünür.
 
 ---
@@ -178,9 +196,9 @@ Görülmemiş 18 günde ölçülen hata, eğitim holdout tahminiyle örtüşüyo
 
 ```
 hedef                     n      MAE   MAPE%    sapma    eğitimdeki MAE
-production_rate_tph   7.853    0.042   0.17%   -0.001         0.041
-reel_moisture_pct     7.853    0.395   7.88%   +0.010         0.413
-sec_total_kwh_t       7.853   20.094   1.45%   -2.249        19.110
+production_rate_tph   4.423    0.041   0.17%   -0.001         0.041
+reel_moisture_pct     4.423    0.412   8.15%   +0.022         0.412
+sec_total_kwh_t       4.423   19.498   1.42%   +1.309        19.499
 ```
 
 ---
@@ -279,6 +297,7 @@ hiç değişmemiş setpoint). Kapıdan geçemeyen kayıtlar **sessizce düşür�
 ## Proje yapısı
 
 ```
+start.sh                   tek komutla kurulum + veri + model + dashboard
 config/
   settings.yaml            depo, feature, eğitim, optimizasyon, fiyat ayarları
   profile.paper.yaml       kağıt makinesi proses sözlüğü ← YENİ FABRİKA = YENİ DOSYA
@@ -297,7 +316,7 @@ src/twin/
   dashboard/               app.py (Gerçek vs Tahmin) + pages/ + theme.py + data.py
 scripts/                   müşteriye gönderilecek sensor_registry şablonu
 docs/                      1–5 numaralı dokümanlar
-tests/                     52 test — sızıntı, zaman sırası, ekstrapolasyon kilidi,
+tests/                     55 test — sızıntı, zaman sırası, ekstrapolasyon kilidi,
                            eğitim↔servis paritesi, dashboard duman testi
 ```
 
@@ -312,7 +331,7 @@ tests/                     52 test — sızıntı, zaman sırası, ekstrapolasyo
 | Streamlit dashboard | 4 sayfanın hepsi `AppTest` ile koşturuldu: 0 istisna, deprecation yok |
 | Çelik (EAF) profili | Simülasyon → feature → denetimli matris adımlarına kadar çalıştırıldı |
 | Müşteri CSV ingest'i | Bozuk veri enjekte edilerek test edildi (birim hatası, `-9999`, bilinmeyen tag, saat dilimi) |
-| Testler | **52 test**, hepsi geçiyor (`make test`) — atlanan test yok |
+| Testler | **55 test**, hepsi geçiyor (`make test`) — atlanan test yok |
 | Elasticsearch adaptörü | Index şablonları, aylık bölme ve sorgu üretimi doğrulandı; **canlı bir kümeye karşı çalıştırılmadı** |
 | MySQL adaptörü | Şema ve sorgu üretimi yazıldı; **canlı bir sunucuya karşı çalıştırılmadı** |
 | Docker Compose | Yazıldı, ayağa kaldırılmadı |

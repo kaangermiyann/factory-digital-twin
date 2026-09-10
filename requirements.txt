@@ -4,7 +4,11 @@ pandas>=2.0
 pyarrow>=12.0
 PyYAML>=6.0
 scipy>=1.10
-scikit-learn>=1.3
+# UST SINIR BILINCLI: egitilmis modeller joblib/pickle ile saklaniyor ve farkli
+# bir sklearn MINOR surumunde ya acilmiyor ya da -- daha kotusu -- aciliyor ve
+# sessizce yanlis sonuc uretiyor. Model paketi egitildigi ortami kaydeder,
+# uyumsuzlukta yuklemeyi REDDEDER (bkz. models/registry.py).
+scikit-learn>=1.3,<2.0
 joblib>=1.3
 
 # Servis

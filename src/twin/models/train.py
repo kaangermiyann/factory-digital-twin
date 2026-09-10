@@ -43,6 +43,7 @@ from twin.models import evaluate as ev
 from twin.models.registry import (
     ModelBundle,
     compute_feature_stats,
+    current_environment,
     new_version,
     save_bundle,
 )
@@ -296,6 +297,7 @@ def train_target(
         train_start=str(X.index.min()),
         train_end=str(X.index.max()),
         holdout_start=str(X_hold.index.min()) if len(X_hold) else None,
+        environment=current_environment(),
         n_rows=len(X),
     )
     bundle.attach_support(X_train)

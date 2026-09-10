@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 
 from twin.config import Profile, get_profile, get_settings
-from twin.models.registry import ModelBundle, load_all
+from twin.models.registry import ModelBundle, load_all_detailed
 from twin.schema import Dataset
 from twin.serving.scorer import LiveContext, score_frame
 from twin.storage import Repository, get_repository
@@ -23,7 +23,19 @@ from twin.storage import Repository, get_repository
 @st.cache_resource
 def resources() -> Tuple[Profile, Repository, Dict[str, ModelBundle], Any]:
     profile = get_profile()
-    return profile, get_repository(), load_all(profile.name), get_settings()
+    bundles, failures = load_all_detailed(profile.name)
+    resources.failures = failures          # type: ignore[attr-defined]
+    return profile, get_repository(), bundles, get_settings()
+
+
+def load_failures() -> Dict[str, str]:
+    """Yuklenemeyen modeller. Bos degilse EKRANDA gosterilmeli.
+
+    Sessizce eksik model listesiyle devam etmek, dashboard'un 4 hedef yerine
+    1 tanesini gostermesi ve kullanicinin bunu fark etmemesi demektir.
+    """
+    resources()                            # onbellegi doldur
+    return getattr(resources, "failures", {})  # type: ignore[attr-defined]
 
 
 def holdout_start(bundles: Dict[str, ModelBundle]) -> Optional[pd.Timestamp]:

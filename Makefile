@@ -1,14 +1,21 @@
-PYTHON ?= python3
+# .venv varsa ONU kullan. Sebep: egitilmis modeller joblib/pickle ile saklanir
+# ve baska bir sklearn surumunde yuklenemez. Sistem python'uyla `make test`
+# kosturmak, dashboard testlerinin SESSIZCE atlanmasina yol acar.
+# Baska bir yorumlayici icin: make PYTHON=/yol/python3 test
+PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 export PYTHONPATH := src
 
 .DEFAULT_GOAL := help
-.PHONY: help setup sim live train train-fast score recipe api dash demo test clean elastic-up elastic-down reset
+.PHONY: start help setup sim live train train-fast score recipe api dash demo test clean elastic-up elastic-down reset
+
+start:  ## Tek komutla her seyi kur ve dashboard'u ac (yeni gelen buradan baslasin)
+	./start.sh
 
 help:  ## Komutlari listele
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-setup:  ## Bagimliliklari kur
+setup:  ## Bagimliliklari kur (tercihen ./start.sh kullanin -- venv'i o kurar)
 	$(PYTHON) -m pip install -r requirements.txt
 
 sim:  ## 90 gunluk sentetik gecmis uret
