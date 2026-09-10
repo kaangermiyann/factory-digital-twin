@@ -1,0 +1,280 @@
+# Kagit Makinesi (PM2) proses profili
+#
+# Bu dosya projenin sozlugudur. Musteri verisi geldiginde SADECE bu dosya ve
+# ingest/tag_map degistirilir; feature/model/optimize katmani aynen calisir.
+#
+# role: setpoint    -> operator degistirebilir  => OPTIMIZASYON DEGISKENI
+#       context     -> disaridan gelir, degistirilemez
+#       measurement -> prosesin ciktisi (hedef veya ara olcum)
+
+line_id: PM2
+plant: KAGIT-1
+area: PM
+description: "Testliner / fluting kagit makinesi"
+wire_width_m: 6.40
+
+variables:
+
+  # ---------------- KONTROL EDILEBILIR (setpoint) ----------------
+  machine_speed_mpm:
+    role: setpoint
+    unit: m/min
+    tag: 10SIC0102.SP
+    desc: "Makine hizi"
+    op_low: 500
+    op_high: 1150
+    nominal: 850
+    max_delta: 35          # 5 dk icinde izin verilen maks degisim
+    asset: PM2.WIRE
+
+  headbox_consistency_pct:
+    role: setpoint
+    unit: "%"
+    tag: 10CIC0234.SP
+    desc: "Hamur kasasi konsantrasyonu"
+    op_low: 0.60
+    op_high: 1.20
+    nominal: 0.90
+    max_delta: 0.05
+    asset: PM2.HB
+
+  refiner_sec_kwh_t:
+    role: setpoint
+    unit: kWh/t
+    tag: 10EIC0011.SP
+    desc: "Refiner ozgul enerjisi (dovme derecesi)"
+    op_low: 60
+    op_high: 140
+    nominal: 95
+    max_delta: 8
+    asset: PM2.STOCK
+
+  press_nip_load_knm:
+    role: setpoint
+    unit: kN/m
+    tag: 10PIC0455.SP
+    desc: "Pres nip yuku"
+    op_low: 250
+    op_high: 420
+    nominal: 320
+    max_delta: 30
+    asset: PM2.PRESS
+
+  vacuum_kpa:
+    role: setpoint
+    unit: kPa
+    tag: 10PIC0301.SP
+    desc: "Elek vakum seviyesi (negatif)"
+    op_low: -70
+    op_high: -35
+    nominal: -50
+    max_delta: 6
+    asset: PM2.WIRE
+
+  steam_g1_bar:
+    role: setpoint
+    unit: bar
+    tag: 10PIC0611.SP
+    desc: "Kurutma grubu 1 buhar basinci"
+    op_low: 0.5
+    op_high: 3.5
+    nominal: 2.6
+    max_delta: 0.3
+    asset: PM2.DRY.G1
+
+  steam_g2_bar:
+    role: setpoint
+    unit: bar
+    tag: 10PIC0612.SP
+    desc: "Kurutma grubu 2 buhar basinci"
+    op_low: 0.8
+    op_high: 4.5
+    nominal: 3.4
+    max_delta: 0.3
+    asset: PM2.DRY.G2
+
+  steam_g3_bar:
+    role: setpoint
+    unit: bar
+    tag: 10PIC0613.SP
+    desc: "Kurutma grubu 3 buhar basinci"
+    op_low: 0.8
+    op_high: 5.0
+    nominal: 4.0
+    max_delta: 0.3
+    asset: PM2.DRY.G3
+
+  hood_supply_temp_c:
+    role: setpoint
+    unit: C
+    tag: 10TIC0701.SP
+    desc: "Hood besleme havasi sicakligi"
+    op_low: 80
+    op_high: 130
+    nominal: 105
+    max_delta: 8
+    asset: PM2.HOOD
+
+  retention_aid_kg_t:
+    role: setpoint
+    unit: kg/t
+    tag: 10FIC0820.SP
+    desc: "Retansiyon yardimcisi dozaji"
+    op_low: 0.2
+    op_high: 1.2
+    nominal: 0.6
+    max_delta: 0.1
+    asset: PM2.CHEM
+
+  # ---------------- BAGLAM (context) ----------------
+  ambient_temp_c:
+    role: context
+    unit: C
+    tag: WS.TEMP
+    desc: "Ortam sicakligi"
+    asset: PLANT
+
+  ambient_humidity_pct:
+    role: context
+    unit: "%"
+    tag: WS.RH
+    desc: "Ortam bagil nemi"
+    asset: PLANT
+
+  pulp_freeness_ml:
+    role: context
+    unit: mL
+    tag: LAB.CSF
+    desc: "Hamur freeness (CSF) - hammadde degiskenligi"
+    asset: PM2.STOCK
+
+  recycled_ratio_pct:
+    role: context
+    unit: "%"
+    tag: REC.RATIO
+    desc: "Geri donusum elyaf orani"
+    asset: PM2.STOCK
+
+  basis_weight_target_gsm:
+    role: context
+    unit: g/m2
+    tag: ORDER.BW
+    desc: "Hedef gramaj (urun grade'inden gelir)"
+    asset: PM2
+
+  # ---------------- OLCUM / HEDEF (measurement) ----------------
+  press_dryness_pct:
+    role: measurement
+    unit: "%"
+    tag: 10QI0501.PV
+    desc: "Pres cikisi kuru madde - kurutmaya giren su miktarini belirler"
+    asset: PM2.PRESS
+
+  reel_moisture_pct:
+    role: measurement
+    unit: "%"
+    tag: 10QI0901.PV
+    desc: "Sarici nemi (online scanner) - ANA KALITE HEDEFI"
+    asset: PM2.REEL
+
+  reel_basis_weight_gsm:
+    role: measurement
+    unit: g/m2
+    tag: 10QI0902.PV
+    desc: "Sarici gramaji (online scanner)"
+    asset: PM2.REEL
+
+  production_rate_tph:
+    role: measurement
+    unit: t/h
+    tag: 10FQ0999.PV
+    desc: "Uretim hizi"
+    asset: PM2
+
+  elec_kwh_t:
+    role: measurement
+    unit: kWh/t
+    tag: EM.PM2.ELEC
+    desc: "Ozgul elektrik tuketimi"
+    asset: PM2
+
+  thermal_kwh_t:
+    role: measurement
+    unit: kWh/t
+    tag: EM.PM2.STEAM
+    desc: "Ozgul termal enerji tuketimi (buhar)"
+    asset: PM2
+
+  sec_total_kwh_t:
+    role: measurement
+    unit: kWh/t
+    tag: EM.PM2.TOTAL
+    desc: "Toplam ozgul enerji tuketimi - ANA OPTIMIZASYON HEDEFI"
+    asset: PM2
+
+# ---------------- URUN / GRADE KATALOGU ----------------
+grades:
+  TL80:
+    desc: "Testliner 80 g/m2"
+    basis_weight_gsm: 80
+    moisture_spec: [4.8, 6.2]
+    tensile_spec_min: 45
+    margin_try_per_ton: 2400
+    share: 0.45
+  TL120:
+    desc: "Testliner 120 g/m2"
+    basis_weight_gsm: 120
+    moisture_spec: [5.0, 6.5]
+    tensile_spec_min: 42
+    margin_try_per_ton: 2250
+    share: 0.35
+  FL45:
+    desc: "Fluting 45 g/m2"
+    basis_weight_gsm: 45
+    moisture_spec: [4.5, 5.8]
+    tensile_spec_min: 38
+    margin_try_per_ton: 2650
+    share: 0.20
+
+# ---------------- MODEL TANIMLARI ----------------
+targets:
+
+  sec_total_kwh_t:
+    kind: regression
+    desc: "Toplam ozgul enerji tuketimi (kWh/t)"
+    # Sizinti korumasi: hedefin bilesenleri ve dogrudan turevleri disarida
+    exclude_features: [elec_kwh_t, thermal_kwh_t, sec_total_kwh_t]
+    optimize_direction: minimize
+
+  reel_moisture_pct:
+    kind: regression
+    desc: "Sarici nemi (%)"
+    # Ayni andaki scanner degeri hedefin kendisi -> disla. Lag'li hali serbest.
+    exclude_features: [reel_moisture_pct, sec_total_kwh_t, elec_kwh_t, thermal_kwh_t]
+    constraint: spec          # grade'in moisture_spec araligina uymak zorunda
+
+  production_rate_tph:
+    kind: regression
+    desc: "Uretim hizi (t/h)"
+    exclude_features: [production_rate_tph, sec_total_kwh_t, elec_kwh_t, thermal_kwh_t]
+    optimize_direction: maximize
+    # NOT: Bu hedef fiziksel olarak neredeyse DETERMINISTIKTIR
+    #   uretim (t/h) = hiz x en x gramaj x 60 / 1e6
+    # Dolayisiyla R2 ~ 1.0 cikar ve egitim "sizinti suphesi" uyarisi basar.
+    # Uyari dogru davraniyor; burada gercek sebep sizinti degil determinizmdir.
+    # Modeli yine de egitiyoruz cunku optimizasyon, setpointlere karsi bir
+    # uretim TEPKI FONKSIYONUNA ihtiyac duyar (kisit: uretim >= min_rate).
+
+  break_next_30m:
+    kind: classification
+    desc: "30 dk icinde kagit kopusu olasiligi"
+    horizon_min: 30
+    # Durusun kendisinden turemis ozellikler disarida (hiz 0 -> trivial model)
+    exclude_features: [production_rate_tph, sec_total_kwh_t, elec_kwh_t, thermal_kwh_t]
+    risk_ceiling: 0.06
+
+# ---------------- OPTIMIZASYON KISITLARI ----------------
+constraints:
+  min_production_rate_tph: 16.0
+  break_risk_ceiling: 0.06
+  moisture_from_grade: true      # spec grade'den okunur

@@ -1,0 +1,275 @@
+# Demir-Celik (EAF + Pota + Surekli Dokum + Tav Firini) proses profili
+#
+# Kagit profilinden yapisal fark: proses BATCH'tir (heat bazli), surekli degil.
+# Ayni canonical semayi kullanir; batch_id = HEAT-xxxxx.
+
+line_id: EAF1
+plant: CELIK-1
+area: MELTSHOP
+description: "80 ton EAF + LF + surekli dokum + tav firini + sicak haddehane"
+heat_size_t: 80
+
+variables:
+
+  # ---------------- KONTROL EDILEBILIR (setpoint) ----------------
+  active_power_mw:
+    role: setpoint
+    unit: MW
+    tag: EAF1.PWR.SP
+    desc: "Ark ocagi aktif gucu"
+    op_low: 40
+    op_high: 90
+    nominal: 70
+    max_delta: 6
+    asset: EAF1
+
+  oxygen_nm3_t:
+    role: setpoint
+    unit: Nm3/t
+    tag: EAF1.O2.SP
+    desc: "Oksijen enjeksiyonu - kimyasal enerji, elektrigi ikame eder"
+    op_low: 22
+    op_high: 48
+    nominal: 33
+    max_delta: 4
+    asset: EAF1
+
+  carbon_inject_kg_t:
+    role: setpoint
+    unit: kg/t
+    tag: EAF1.C.SP
+    desc: "Karbon enjeksiyonu - kopuklu curuf"
+    op_low: 8
+    op_high: 24
+    nominal: 14
+    max_delta: 2
+    asset: EAF1
+
+  lime_kg_t:
+    role: setpoint
+    unit: kg/t
+    tag: EAF1.LIME.SP
+    desc: "Kirec ilavesi - curuf bazikligi"
+    op_low: 28
+    op_high: 62
+    nominal: 42
+    max_delta: 5
+    asset: EAF1
+
+  tap_temp_target_c:
+    role: setpoint
+    unit: C
+    tag: EAF1.TAPT.SP
+    desc: "Hedef dokum sicakligi - ASIRI ISITMA = BOSA ENERJI"
+    op_low: 1600
+    op_high: 1680
+    nominal: 1640
+    max_delta: 15
+    asset: EAF1
+
+  lf_heating_min:
+    role: setpoint
+    unit: min
+    tag: LF1.HEAT.SP
+    desc: "Pota ocagi isitma suresi"
+    op_low: 4
+    op_high: 28
+    nominal: 12
+    max_delta: 3
+    asset: LF1
+
+  caster_speed_mmin:
+    role: setpoint
+    unit: m/min
+    tag: CC1.SPD.SP
+    desc: "Surekli dokum hizi"
+    op_low: 0.80
+    op_high: 1.65
+    nominal: 1.15
+    max_delta: 0.10
+    asset: CC1
+
+  reheat_zone1_c:
+    role: setpoint
+    unit: C
+    tag: RF1.Z1.SP
+    desc: "Tav firini bolge 1 (on isitma)"
+    op_low: 880
+    op_high: 1150
+    nominal: 1010
+    max_delta: 25
+    asset: RF1
+
+  reheat_zone2_c:
+    role: setpoint
+    unit: C
+    tag: RF1.Z2.SP
+    desc: "Tav firini bolge 2 (isitma)"
+    op_low: 1040
+    op_high: 1260
+    nominal: 1160
+    max_delta: 25
+    asset: RF1
+
+  reheat_zone3_c:
+    role: setpoint
+    unit: C
+    tag: RF1.Z3.SP
+    desc: "Tav firini bolge 3 (soaking)"
+    op_low: 1130
+    op_high: 1300
+    nominal: 1215
+    max_delta: 20
+    asset: RF1
+
+  excess_air_ratio:
+    role: setpoint
+    unit: "-"
+    tag: RF1.LAMBDA.SP
+    desc: "Hava fazlalik katsayisi - yanma verimi (1.0 = stokiyometrik)"
+    op_low: 1.02
+    op_high: 1.35
+    nominal: 1.12
+    max_delta: 0.04
+    asset: RF1
+
+  # ---------------- BAGLAM (context) ----------------
+  scrap_quality_index:
+    role: context
+    unit: "-"
+    tag: SCRAP.QIDX
+    desc: "Hurda kalite indeksi (0-1, yuksek = temiz/yogun hurda)"
+    asset: SCRAPYARD
+
+  scrap_moisture_pct:
+    role: context
+    unit: "%"
+    tag: SCRAP.MOIST
+    desc: "Hurda nemi - buharlasma enerjisi ve patlama riski"
+    asset: SCRAPYARD
+
+  charge_weight_t:
+    role: context
+    unit: t
+    tag: EAF1.CHG.WT
+    desc: "Sarj agirligi"
+    asset: EAF1
+
+  ambient_temp_c:
+    role: context
+    unit: C
+    tag: WS.TEMP
+    desc: "Ortam sicakligi"
+    asset: PLANT
+
+  slab_thickness_mm:
+    role: context
+    unit: mm
+    tag: ORDER.THK
+    desc: "Slab kalinligi (urun grade'inden)"
+    asset: CC1
+
+  # ---------------- OLCUM / HEDEF (measurement) ----------------
+  tap_temp_c:
+    role: measurement
+    unit: C
+    tag: EAF1.TAPT.PV
+    desc: "Gerceklesen dokum sicakligi - KALITE KISITI"
+    asset: EAF1
+
+  tap_to_tap_min:
+    role: measurement
+    unit: min
+    tag: EAF1.TTT.PV
+    desc: "Tap-to-tap suresi - ANA VERIMLILIK METRIGI"
+    asset: EAF1
+
+  superheat_c:
+    role: measurement
+    unit: C
+    tag: CC1.SH.PV
+    desc: "Superheat - dusuk ise dondurma, yuksek ise breakout riski"
+    asset: CC1
+
+  eaf_elec_kwh_t:
+    role: measurement
+    unit: kWh/t
+    tag: EM.EAF1.ELEC
+    desc: "EAF ozgul elektrik tuketimi"
+    asset: EAF1
+
+  reheat_gas_kwh_t:
+    role: measurement
+    unit: kWh/t
+    tag: EM.RF1.GAS
+    desc: "Tav firini ozgul dogalgaz tuketimi"
+    asset: RF1
+
+  production_rate_tph:
+    role: measurement
+    unit: t/h
+    tag: MS.RATE
+    desc: "Celikhane uretim hizi"
+    asset: EAF1
+
+  sec_total_kwh_t:
+    role: measurement
+    unit: kWh/t
+    tag: EM.MS.TOTAL
+    desc: "Toplam ozgul enerji tuketimi - ANA OPTIMIZASYON HEDEFI"
+    asset: EAF1
+
+grades:
+  S235JR:
+    desc: "Yapisal celik"
+    slab_thickness_mm: 220
+    tap_temp_spec: [1610, 1665]
+    superheat_spec: [15, 45]
+    margin_try_per_ton: 3100
+    share: 0.50
+  S355J2:
+    desc: "Yuksek dayanimli yapisal celik"
+    slab_thickness_mm: 250
+    tap_temp_spec: [1620, 1670]
+    superheat_spec: [18, 42]
+    margin_try_per_ton: 3900
+    share: 0.30
+  C45E:
+    desc: "Orta karbonlu kalite celik"
+    slab_thickness_mm: 200
+    tap_temp_spec: [1600, 1655]
+    superheat_spec: [12, 38]
+    margin_try_per_ton: 4600
+    share: 0.20
+
+targets:
+
+  sec_total_kwh_t:
+    kind: regression
+    desc: "Toplam ozgul enerji tuketimi (kWh/t)"
+    exclude_features: [eaf_elec_kwh_t, reheat_gas_kwh_t, sec_total_kwh_t]
+    optimize_direction: minimize
+
+  tap_temp_c:
+    kind: regression
+    desc: "Dokum sicakligi (C)"
+    exclude_features: [tap_temp_c, superheat_c, sec_total_kwh_t, eaf_elec_kwh_t, reheat_gas_kwh_t]
+    constraint: spec
+
+  production_rate_tph:
+    kind: regression
+    desc: "Uretim hizi (t/h)"
+    exclude_features: [production_rate_tph, tap_to_tap_min, sec_total_kwh_t, eaf_elec_kwh_t, reheat_gas_kwh_t]
+    optimize_direction: maximize
+
+  break_next_30m:
+    kind: classification
+    desc: "30 dk icinde plansiz durus (breakout / ekipman) olasiligi"
+    horizon_min: 30
+    exclude_features: [production_rate_tph, sec_total_kwh_t, eaf_elec_kwh_t, reheat_gas_kwh_t]
+    risk_ceiling: 0.05
+
+constraints:
+  min_production_rate_tph: 55.0
+  break_risk_ceiling: 0.05
+  moisture_from_grade: false

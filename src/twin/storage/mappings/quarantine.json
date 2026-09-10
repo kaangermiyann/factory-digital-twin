@@ -1,0 +1,26 @@
+{
+  "priority": 200,
+  "template": {
+    "settings": {
+      "index.mapping.total_fields.limit": 2000
+    },
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "ts": {
+          "type": "date"
+        },
+        "dataset": {
+          "type": "keyword"
+        },
+        "reason": {
+          "type": "keyword"
+        },
+        "payload": {
+          "type": "object",
+          "enabled": false
+        }
+      }
+    }
+  }
+}

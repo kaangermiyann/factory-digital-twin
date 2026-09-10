@@ -1,0 +1,25 @@
+# Cekirdek
+numpy>=1.24
+pandas>=2.0
+pyarrow>=12.0
+PyYAML>=6.0
+scipy>=1.10
+scikit-learn>=1.3
+joblib>=1.3
+
+# Servis
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.0
+
+# Dashboard
+streamlit>=1.30
+plotly>=5.18
+
+# Depolama (opsiyonel -- parquet backend ile calisirken gerekmez)
+elasticsearch>=8.10,<9
+SQLAlchemy>=2.0
+PyMySQL>=1.1
+
+# Gelistirme
+pytest>=7.4

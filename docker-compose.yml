@@ -1,0 +1,87 @@
+# On-prem calisir. Fabrikalar veriyi disari cikarmaz; hicbir servis internet istemez.
+# Tek makinede 16 GB RAM yeterlidir.
+#
+#   docker compose up -d elasticsearch kibana mysql     # sadece depolama
+#   docker compose --profile app up -d                  # + api + dashboard + simulator
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: twin-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false          # on-prem, izole ag. Uretimde ACIN.
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ports: ["9200:9200"]
+    volumes: [es-data:/usr/share/elasticsearch/data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: twin-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports: ["5601:5601"]
+    depends_on:
+      elasticsearch: {condition: service_healthy}
+
+  mysql:
+    image: mysql:8.0
+    container_name: twin-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: twin
+      MYSQL_USER: twin
+      MYSQL_PASSWORD: twin
+    command: --default-authentication-plugin=mysql_native_password
+    ports: ["3306:3306"]
+    volumes: [mysql-data:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptwin"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  # ---- uygulama katmani (profil: app) ------------------------------------- #
+  api:
+    profiles: ["app"]
+    build: .
+    container_name: twin-api
+    command: uvicorn twin.serving.api:app --host 0.0.0.0 --port 8000
+    environment: &twin-env
+      PYTHONPATH: /app/src
+      TWIN_STORAGE__BACKEND: elastic
+      TWIN_STORAGE__ELASTIC__HOSTS: '["http://elasticsearch:9200"]'
+      TWIN_PROFILE: paper
+    ports: ["8000:8000"]
+    volumes: [./data:/app/data]
+    depends_on:
+      elasticsearch: {condition: service_healthy}
+
+  dashboard:
+    profiles: ["app"]
+    build: .
+    container_name: twin-dashboard
+    command: streamlit run src/twin/dashboard/app.py --server.address 0.0.0.0 --server.port 8501
+    environment: *twin-env
+    ports: ["8501:8501"]
+    volumes: [./data:/app/data]
+    depends_on: [api]
+
+  simulator:
+    profiles: ["app"]
+    build: .
+    container_name: twin-simulator
+    command: python -m twin.simulator.run live --speed 60
+    environment: *twin-env
+    depends_on:
+      elasticsearch: {condition: service_healthy}
+
+volumes:
+  es-data:
+  mysql-data:

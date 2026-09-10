@@ -1,0 +1,40 @@
+{
+  "priority": 200,
+  "template": {
+    "settings": {
+      "index.mapping.total_fields.limit": 2000
+    },
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "ts": {
+          "type": "date"
+        },
+        "line_id": {
+          "type": "keyword"
+        },
+        "target": {
+          "type": "keyword"
+        },
+        "model_name": {
+          "type": "keyword"
+        },
+        "model_version": {
+          "type": "keyword"
+        },
+        "y_pred": {
+          "type": "double"
+        },
+        "y_true": {
+          "type": "double"
+        },
+        "horizon_min": {
+          "type": "integer"
+        },
+        "features_hash": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

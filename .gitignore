@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Uretilmis veri ve modeller -- repoya girmez
+data/processed/
+data/models/
+data/raw/*
+!data/raw/.gitkeep
+
+.pytest_cache/

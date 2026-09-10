@@ -1,0 +1,46 @@
+{
+  "priority": 200,
+  "template": {
+    "settings": {
+      "index.mapping.total_fields.limit": 2000
+    },
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "ts": {
+          "type": "date"
+        },
+        "line_id": {
+          "type": "keyword"
+        },
+        "product_code": {
+          "type": "keyword"
+        },
+        "current_setpoints": {
+          "type": "object"
+        },
+        "recommended_setpoints": {
+          "type": "object"
+        },
+        "predicted_current": {
+          "type": "object"
+        },
+        "predicted_optimized": {
+          "type": "object"
+        },
+        "saving_try_per_ton": {
+          "type": "double"
+        },
+        "confidence": {
+          "type": "keyword"
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "text"
+        }
+      }
+    }
+  }
+}

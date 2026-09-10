@@ -1,0 +1,43 @@
+{
+  "priority": 200,
+  "template": {
+    "settings": {
+      "index.mapping.total_fields.limit": 2000
+    },
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "event_id": {
+          "type": "keyword"
+        },
+        "ts_start": {
+          "type": "date"
+        },
+        "ts_end": {
+          "type": "date"
+        },
+        "line_id": {
+          "type": "keyword"
+        },
+        "asset_id": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "category": {
+          "type": "keyword"
+        },
+        "reason_code": {
+          "type": "keyword"
+        },
+        "reason_text": {
+          "type": "text"
+        },
+        "duration_s": {
+          "type": "double"
+        }
+      }
+    }
+  }
+}

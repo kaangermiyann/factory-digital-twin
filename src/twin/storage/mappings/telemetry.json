@@ -1,0 +1,53 @@
+{
+  "priority": 200,
+  "template": {
+    "settings": {
+      "index.mapping.total_fields.limit": 2000,
+      "index.sort.field": [
+        "line_id",
+        "variable",
+        "ts"
+      ],
+      "index.sort.order": [
+        "asc",
+        "asc",
+        "asc"
+      ]
+    },
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "ts": {
+          "type": "date"
+        },
+        "line_id": {
+          "type": "keyword"
+        },
+        "asset_id": {
+          "type": "keyword"
+        },
+        "tag": {
+          "type": "keyword"
+        },
+        "variable": {
+          "type": "keyword"
+        },
+        "value": {
+          "type": "double"
+        },
+        "unit": {
+          "type": "keyword"
+        },
+        "role": {
+          "type": "keyword"
+        },
+        "quality": {
+          "type": "integer"
+        },
+        "batch_id": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

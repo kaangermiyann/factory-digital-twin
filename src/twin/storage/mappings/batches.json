@@ -1,0 +1,46 @@
+{
+  "priority": 200,
+  "template": {
+    "settings": {
+      "index.mapping.total_fields.limit": 2000
+    },
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "batch_id": {
+          "type": "keyword"
+        },
+        "line_id": {
+          "type": "keyword"
+        },
+        "product_code": {
+          "type": "keyword"
+        },
+        "start_ts": {
+          "type": "date"
+        },
+        "end_ts": {
+          "type": "date"
+        },
+        "produced_qty": {
+          "type": "double"
+        },
+        "scrap_qty": {
+          "type": "double"
+        },
+        "uom": {
+          "type": "keyword"
+        },
+        "order_id": {
+          "type": "keyword"
+        },
+        "shift_id": {
+          "type": "integer"
+        },
+        "crew": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

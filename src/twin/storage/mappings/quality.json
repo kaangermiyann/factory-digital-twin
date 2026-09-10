@@ -1,0 +1,43 @@
+{
+  "priority": 200,
+  "template": {
+    "settings": {
+      "index.mapping.total_fields.limit": 2000
+    },
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "sample_id": {
+          "type": "keyword"
+        },
+        "batch_id": {
+          "type": "keyword"
+        },
+        "ts": {
+          "type": "date"
+        },
+        "line_id": {
+          "type": "keyword"
+        },
+        "property": {
+          "type": "keyword"
+        },
+        "value": {
+          "type": "double"
+        },
+        "unit": {
+          "type": "keyword"
+        },
+        "spec_min": {
+          "type": "double"
+        },
+        "spec_max": {
+          "type": "double"
+        },
+        "passed": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

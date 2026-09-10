@@ -1,0 +1,115 @@
+# Factory Digital Twin — ana konfigürasyon
+# Ortam degiskeni ile ezilebilir:  TWIN_STORAGE__BACKEND=elastic
+
+project_name: factory-digital-twin
+
+# Aktif proses profili: config/profile.<name>.yaml
+profile: paper          # paper | steel
+
+storage:
+  # parquet -> docker'siz lokal calisma (varsayilan, demo icin)
+  # elastic -> zaman serisi icin uretim backend'i
+  # mysql   -> musteri sadece MySQL istiyorsa
+  backend: parquet
+
+  parquet:
+    root: data/processed
+
+  elastic:
+    hosts: ["http://localhost:9200"]
+    username: null
+    password: null
+    verify_certs: false
+    index_prefix: twin
+    bulk_chunk_size: 5000
+    refresh_interval: 30s
+    number_of_shards: 1
+    number_of_replicas: 0
+
+  mysql:
+    host: localhost
+    port: 3306
+    database: twin
+    username: twin
+    password: twin
+    pool_size: 5
+
+features:
+  resample: "5min"          # telemetriyi bu araliga indir
+  # 5 dk yeniden ornekleme ile lag5 ve lag10 yalnizca 1 ve 2 adim arayla;
+  # neredeyse tamamen es-dogrusaldirlar ve sinyalden cok gurultu eklerler.
+  # Seyrek bir izgara hem daha az ozellik hem daha az es-dogrusallik demek.
+  lags_min: [0, 10, 30]
+  rolling_min: [15, 60]
+  delta_min: [15]
+  # Proses olu zamani: hedef ile kontrol degiskeni arasindaki gecikme (dk).
+  # CV gap'i bu degerden hesaplanir.
+  process_dead_time_min: 15
+
+training:
+  # 3 kat, ileri dogru zincirli CV icin standart ve yeterli; 4. kat egitim
+  # penceresini kisaltip ilk katlari zayiflatiyordu.
+  n_splits: 3
+  holdout_fraction: 0.2
+  random_state: 42
+  models: [naive, ridge, random_forest, gradient_boosting]
+  random_forest:
+    # 200 agac, 200 ozellikte 300'den ayirt edilemez (varyans ~1/sqrt(n)).
+    n_estimators: 200
+    max_depth: null
+    min_samples_leaf: 5
+    # Yuksek boyutlu tabular veride 0.3 standart; hem hizli hem de agaclar
+    # arasindaki korelasyonu dusurdugu icin genelde daha iyi.
+    max_features: 0.3
+    n_jobs: -1
+  gradient_boosting:
+    # 200 iterasyon x 0.10 ogrenme orani ~ 400 x 0.06 ile ayni kapasite,
+    # yari maliyet. early_stopping zaten erken kesiyor.
+    max_iter: 200
+    learning_rate: 0.10
+    max_leaf_nodes: 31
+    early_stopping: true
+  # R2 bu esigin uzerindeyse sizinti (leakage) uyarisi bas
+  leakage_r2_warning: 0.98
+  # Agac modeli en iyi skora bu kadar yakinsa, dogrusal model yerine O secilir.
+  # Sebep: secilen model optimizasyonun uzerinde arama yaptigi vekil yuzeydir;
+  # agac egitim destegi disinda doyuma gider, dogrusal model sinirsiz
+  # ekstrapole edip sahte kazanc uretir. Bkz. models/train.py
+  optimizer_safe_tolerance: 0.03
+
+optimize:
+  solver: differential_evolution   # differential_evolution | random_search | grid
+  max_iter: 60
+  population: 24
+  seed: 7
+  penalty_weight: 10000.0
+  # Ekstrapolasyon korumasi, egitim aninda kaydedilen p01-p99 zarfini kullanir
+  # (bkz. models/registry.py -> feature_stats). Ayarlanabilir bir esik degil;
+  # modelin ne gordugu ancak kendi kaydindan bilinir.
+  # Onerilen calisma noktasina benzer egitim ornegi sayisi bunun altindaysa
+  # tavsiye "dusuk guven" isaretlenir (model-bagimsiz komsuluk sayimi)
+  min_support: 20
+
+prices:
+  electricity_try_per_kwh: 3.10
+  # Termal enerji dogalgazdan; kazan verimi ile duzeltilmis
+  thermal_try_per_kwh: 1.35
+  boiler_efficiency: 0.88
+  # Puant saat carpani (17:00-22:00)
+  peak_hours: [17, 18, 19, 20, 21]
+  peak_multiplier: 1.85
+  offpeak_hours: [0, 1, 2, 3, 4, 5]
+  offpeak_multiplier: 0.55
+  scrap_cost_try_per_ton: 9800
+  product_margin_try_per_ton: 2400
+
+serving:
+  api_host: "0.0.0.0"
+  api_port: 8000
+  scorer_interval_s: 60
+  model_dir: data/models
+
+dashboard:
+  refresh_seconds: 10
+  live_window_hours: 6
+  api_url: "http://localhost:8000"
